@@ -1,7 +1,7 @@
 # Copyright 2022-2023 TII (SSRC) and the Ghaf contributors
 # SPDX-License-Identifier: Apache-2.0
 {
-  description = "Ghafderi - Ghaf based configuration";
+  description = "Bpmp Virtualization Test - Ghaf based configuration";
 
   nixConfig = {
     extra-trusted-substituters = [
@@ -29,9 +29,8 @@
         jetpack-nixos.follows = "jetpack-nixos";
       };
     };
-    bpmp-virt = {
-      url = "github:juliuskoskela/bpmp-virt";
-    };
+    # Add bpmp-virt flake (main branch implied).
+    bpmp-virt.url = "github:juliuskoskela/bpmp-virt";
   };
 
   outputs = {
@@ -55,16 +54,16 @@
       }))
 
       {
-        nixosConfigurations.ghafderi-ghaf-debug = ghaf.nixosConfigurations.nvidia-jetson-orin-agx-debug.extendModules {
+        nixosConfigurations.ghaf-bpmp-virt-test = ghaf.nixosConfigurations.nvidia-jetson-orin-agx-debug.extendModules {
           modules = [
             bpmp-virt.nixosModules.bpmp-virt-host
           ];
         };
-        packages.aarch64-linux.ghafderi-ghaf-debug = self.nixosConfigurations.ghafderi-ghaf-debug.config.system.build.${self.nixosConfigurations.ghafderi-ghaf-debug.config.formatAttr};
+        packages.aarch64-linux.ghaf-bpmp-virt-test = self.nixosConfigurations.ghaf-bpmp-virt-test.config.system.build.${self.nixosConfigurations.ghaf-bpmp-virt-test.config.formatAttr};
 
-        packages.x86_64-linux.ghafderi-ghaf-debug-flash-script = mkFlashScript {
+        packages.x86_64-linux.ghaf-bpmp-virt-test-flash-script = mkFlashScript {
           inherit nixpkgs jetpack-nixos;
-          hostConfiguration = self.nixosConfigurations.ghafderi-ghaf-debug;
+          hostConfiguration = self.nixosConfigurations.ghaf-bpmp-virt-test;
           flash-tools-system = flake-utils.lib.system.x86_64-linux;
         };
       }
