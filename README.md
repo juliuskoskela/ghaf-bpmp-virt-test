@@ -13,5 +13,5 @@ nix build .#packages.x86_64-linux.ghaf-bpmp-virt-test-flash-script
 3. Run flash script.
 
 ```
-nix build .#packages.x86_64-linux.ghaf-bpmp-virt-test-flash-script
+sudo bash result/bin/flash-ghaf
 ```
