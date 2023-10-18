@@ -15,7 +15,7 @@
   };
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-22.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-23.05";
     flake-utils.url = "github:numtide/flake-utils";
     jetpack-nixos = {
       url = "github:anduril/jetpack-nixos";
@@ -45,7 +45,7 @@
       x86_64-linux
       aarch64-linux
     ];
-    mkFlashScript = import (ghaf + "/lib/mk-flash-script.nix");
+    mkFlashScript = import (ghaf + "/lib/mk-flash-script");
   in
     # Combine list of attribute sets together
     nixpkgs.lib.foldr nixpkgs.lib.recursiveUpdate {} [
@@ -57,25 +57,9 @@
         nixosConfigurations.ghaf-bpmp-virt-test = ghaf.nixosConfigurations.nvidia-jetson-orin-agx-debug.extendModules {
           modules = [
             bpmp-virt.nixosModules.bpmp-virt-host
-            {
-              ghaf = {
-                graphics.weston = {
-                  # use nixpkgs.libmkForce to force the priority of conflicting values from ghaf applications.nix and this file
-                  #
-                  # error: The option `ghaf.graphics.weston.enable' has conflicting definition values:
-                  #       - In `/nix/store/10hjscs2lqhg66v5845jh00sg12nsq76-source/modules/profiles/applications.nix': true
-                  #       - In `<unknown-file>': false
-                  #       Use `lib.mkForce value` or `lib.mkDefault value` to change the priority on any of these definitions.
-                  # (use '--show-trace' to show detailed location information)
-                  enable = nixpkgs.lib.mkForce false;
-                  enableDemoApplications = nixpkgs.lib.mkForce false;
-                };
-                profiles.graphics.enable = false;
-                windows-launcher.enable = nixpkgs.lib.mkForce false;
-              };
-            }
           ];
         };
+
         packages.aarch64-linux.ghaf-bpmp-virt-test = self.nixosConfigurations.ghaf-bpmp-virt-test.config.system.build.${self.nixosConfigurations.ghaf-bpmp-virt-test.config.formatAttr};
 
         packages.x86_64-linux.ghaf-bpmp-virt-test-flash-script = mkFlashScript {
