@@ -29,7 +29,6 @@
         jetpack-nixos.follows = "jetpack-nixos";
       };
     };
-    # Add bpmp-virt flake (main branch implied).
     bpmp-virt.url = "github:juliuskoskela/bpmp-virt";
   };
 
@@ -48,25 +47,23 @@
     mkFlashScript = import (ghaf + "/lib/mk-flash-script");
   in
     # Combine list of attribute sets together
-    nixpkgs.lib.foldr nixpkgs.lib.recursiveUpdate {} [
-      (flake-utils.lib.eachSystem systems (system: {
-        formatter = nixpkgs.legacyPackages.${system}.alejandra;
-      }))
+    flake-utils.lib.eachSystem systems (system: let pkgs = import nixpkgs { inherit system; }; in {
+      formatter = nixpkgs.legacyPackages.${system}.alejandra;
+    })
+    // {
+      nixosConfigurations.ghaf-bpmp-virt-test = ghaf.nixosConfigurations.nvidia-jetson-orin-agx-debug-nodemoapps.extendModules {
+        modules = [
+          bpmp-virt.nixosModules.bpmp-virt-host
+          bpmp-virt.nixosModules.bpmp-virt-guest
+        ];
+      };
 
-      {
-        nixosConfigurations.ghaf-bpmp-virt-test = ghaf.nixosConfigurations.nvidia-jetson-orin-agx-debug.extendModules {
-          modules = [
-            bpmp-virt.nixosModules.bpmp-virt-host
-          ];
-        };
+      packages.aarch64-linux.ghaf-bpmp-virt-test = self.nixosConfigurations.ghaf-bpmp-virt-test.config.system.build.${self.nixosConfigurations.ghaf-bpmp-virt-test.config.formatAttr};
 
-        packages.aarch64-linux.ghaf-bpmp-virt-test = self.nixosConfigurations.ghaf-bpmp-virt-test.config.system.build.${self.nixosConfigurations.ghaf-bpmp-virt-test.config.formatAttr};
-
-        packages.x86_64-linux.ghaf-bpmp-virt-test-flash-script = mkFlashScript {
-          inherit nixpkgs jetpack-nixos;
-          hostConfiguration = self.nixosConfigurations.ghaf-bpmp-virt-test;
-          flash-tools-system = flake-utils.lib.system.x86_64-linux;
-        };
-      }
-    ];
+      packages.x86_64-linux.ghaf-bpmp-virt-test-flash-script = mkFlashScript {
+        inherit nixpkgs jetpack-nixos;
+        hostConfiguration = self.nixosConfigurations.ghaf-bpmp-virt-test;
+        flash-tools-system = flake-utils.lib.system.x86_64-linux;
+      };
+    };
 }
