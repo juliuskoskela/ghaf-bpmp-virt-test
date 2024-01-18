@@ -15,12 +15,15 @@
   };
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-23.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+
     flake-utils.url = "github:numtide/flake-utils";
+
     jetpack-nixos = {
       url = "github:anduril/jetpack-nixos";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
     ghaf = {
       url = "github:tiiuae/ghaf";
       inputs = {
@@ -29,7 +32,11 @@
         jetpack-nixos.follows = "jetpack-nixos";
       };
     };
-    bpmp-virt.url = "github:juliuskoskela/bpmp-virt";
+
+    microvm = {
+      url = "github:astro/microvm.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -38,32 +45,27 @@
     nixpkgs,
     jetpack-nixos,
     flake-utils,
-    bpmp-virt,
+    microvm,
   }: let
-    systems = with flake-utils.lib.system; [
-      x86_64-linux
-      aarch64-linux
-    ];
+    system = "aarch64-linux";
     mkFlashScript = import (ghaf + "/lib/mk-flash-script");
-  in
-    # Combine list of attribute sets together
-    flake-utils.lib.eachSystem systems (system: let pkgs = import nixpkgs { inherit system; }; in {
-      formatter = nixpkgs.legacyPackages.${system}.alejandra;
-    })
-    // {
-      nixosConfigurations.ghaf-bpmp-virt-test = ghaf.nixosConfigurations.nvidia-jetson-orin-agx-debug-nodemoapps.extendModules {
-        modules = [
-          bpmp-virt.nixosModules.bpmp-virt-host
-          bpmp-virt.nixosModules.bpmp-virt-guest
-        ];
-      };
-
-      packages.aarch64-linux.ghaf-bpmp-virt-test = self.nixosConfigurations.ghaf-bpmp-virt-test.config.system.build.${self.nixosConfigurations.ghaf-bpmp-virt-test.config.formatAttr};
-
-      packages.x86_64-linux.ghaf-bpmp-virt-test-flash-script = mkFlashScript {
-        inherit nixpkgs jetpack-nixos;
-        hostConfiguration = self.nixosConfigurations.ghaf-bpmp-virt-test;
-        flash-tools-system = flake-utils.lib.system.x86_64-linux;
-      };
+    pkgs = import nixpkgs {inherit system;};
+    config = self.nixosConfigurations.ghaf-bpmp-virt-test.config;
+  in {
+    nixosConfigurations.ghaf-bpmp-virt-test = ghaf.nixosConfigurations.nvidia-jetson-orin-agx-debug-nodemoapps.extendModules {
+      modules = [
+        (import ./modules/uarta-vm.nix {inherit pkgs config microvm jetpack-nixos;})
+      ];
     };
+
+    packages.aarch64-linux.ghaf-bpmp-virt-test = self.nixosConfigurations.ghaf-bpmp-virt-test.config.system.build.${self.nixosConfigurations.ghaf-bpmp-virt-test.config.formatAttr};
+
+    packages.x86_64-linux.ghaf-bpmp-virt-test-flash-script = mkFlashScript {
+      inherit nixpkgs jetpack-nixos;
+      hostConfiguration = self.nixosConfigurations.ghaf-bpmp-virt-test;
+      flash-tools-system = flake-utils.lib.system.x86_64-linux;
+    };
+
+    formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.alejandra;
+  };
 }
